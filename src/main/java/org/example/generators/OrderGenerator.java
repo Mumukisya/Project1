@@ -22,10 +22,6 @@ public class OrderGenerator {
             ingredients.add("0");
             addIngredients(ingredients, "sauce", sauceCount);
             addIngredients(ingredients, "main", mainCount);
-        }else if (bunCount == 0 && sauceCount == 0 && mainCount == 0) {
-            addIngredients(ingredients, "bun", bunCount);
-            addIngredients(ingredients, "sauce", sauceCount);
-            addIngredients(ingredients, "main", mainCount);
         }
         else {
             addIngredients(ingredients, "bun", bunCount);

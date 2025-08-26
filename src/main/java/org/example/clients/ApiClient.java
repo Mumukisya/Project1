@@ -23,19 +23,15 @@ public class ApiClient {
         RestAssured.baseURI = "https://stellarburgers.nomoreparties.site";
     }
 
-    @Step("Создание пользователя")
+    @Step("Создание пользователя {0}")
     public Response register(RegisterRequest registerRequest) {
         Response response = given()
                 .header("Content-type", "application/json")
                 .body(registerRequest)
                 .post(API_REGISTER);
-        if (response.getContentType().contains("application/json")) {
             token = response.as(RegisterResponse.class).getAccessToken();
             login = registerRequest.getEmail();
             password = registerRequest.getPassword();
-        } else {
-            token = null;
-        }
         return response;
     }
 

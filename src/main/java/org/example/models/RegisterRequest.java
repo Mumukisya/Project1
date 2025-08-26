@@ -13,4 +13,13 @@ public class RegisterRequest {
     private String email;
     private String password;
     private String name;
+
+    @Override
+    public String toString() {
+        return "RegisterRequest{" +
+                "email='" + email + '\'' +
+                ", name='" + name + '\'' +
+                ", password='***'" +
+                '}';
+    }
 }
