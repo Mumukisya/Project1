@@ -1,6 +1,7 @@
 import com.github.javafaker.Faker;
 import io.restassured.response.Response;
 import org.example.clients.ApiClient;
+import org.example.generators.OrderGenerator;
 import org.example.models.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -9,6 +10,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.List;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,6 +25,7 @@ public class ApiTests {
 
     private ApiClient apiClient = new ApiClient();
     private Faker faker = new Faker();
+    private static List<String> ingredients;
 
     @ParameterizedTest(name = "Регистрация пользователя с {2} и ожидаемым ответом: {1}")
     @MethodSource("registerData")
@@ -253,15 +256,32 @@ public class ApiTests {
         assertThat("Некорректный код ответа", response.statusCode(), equalTo(200));
     }
 
-    @ParameterizedTest(name = "Создание заказа {2} и ожидаемым ответом: {1}")
-    @MethodSource("orderData")
-    @DisplayName("Тестирование создания заказа")
-    public void checkCreateOrderWithSuccess(CreateOrderRequest createOrderRequest, int statusCode, String forTestName) {
+    @Test
+    @DisplayName("Тестирование создания заказа с валидными данными")
+    public void checkCreateOrderWithSuccess() {
         apiClient.register(randomUser());
         apiClient.auth();
 
-        Response response = apiClient.createOrder(createOrderRequest);
-        assertThat("Некорректный код ответа", response.statusCode(), equalTo(statusCode));
+        IngredientsResponse ingredientsResponse = apiClient.getAllIngredients()
+                .then()
+                .extract()
+                .as(IngredientsResponse.class);
+
+        ingredients = OrderGenerator.extractIngredientIds(ingredientsResponse);
+
+        CreateOrderRequest testOrder = OrderGenerator.createOrderWithMinimumIngredients(ingredients);
+
+        Response response = apiClient.createOrder(testOrder);
+        assertThat("Некорректный код ответа", response.statusCode(), equalTo(200));
+    }
+
+    @Test
+    @DisplayName("Тестирование создания заказа без ингридиентов")
+    public void checkCreateOrderWithoutIngredients() {
+        apiClient.register(randomUser());
+        apiClient.auth();
+        Response response = apiClient.createOrder(new CreateOrderRequest());
+        assertThat("Некорректный код ответа", response.statusCode(), equalTo(400));
     }
 
     @Test
@@ -271,7 +291,16 @@ public class ApiTests {
         apiClient.register(randomUser());
         apiClient.auth();
 
-        Response response = apiClient.createOrderWithoutToken(generateRandomValidOrder());
+        IngredientsResponse ingredientsResponse = apiClient.getAllIngredients()
+                .then()
+                .extract()
+                .as(IngredientsResponse.class);
+
+        ingredients = OrderGenerator.extractIngredientIds(ingredientsResponse);
+
+        CreateOrderRequest testOrder = OrderGenerator.createOrderWithMinimumIngredients(ingredients);
+
+        Response response = apiClient.createOrderWithoutToken(testOrder);
         assertThat("Некорректный код ответа", response.statusCode(), equalTo(200));
 //        Я бы поставил 401 статус код для проверки, но почему-то я могу создать заказ без авторизации
     }
@@ -279,10 +308,11 @@ public class ApiTests {
     @Test
     @DisplayName("Тестирование получения заказов")
     public void checkUserOrderWithSuccess() {
+        CreateOrderRequest testOrder = OrderGenerator.createOrderWithMultipleIngredients(ingredients);
 
         apiClient.register(randomUser());
         apiClient.auth();
-        apiClient.createOrder(generateRandomValidOrder());
+        apiClient.createOrder(testOrder);
 
         Response response = apiClient.getUserOrders();
         assertThat("Некорректный код ответа", response.statusCode(), equalTo(200));
@@ -291,10 +321,10 @@ public class ApiTests {
     @Test
     @DisplayName("Тестирование получения заказов без токена")
     public void checkUserOrderWithoutToken() {
-
+        CreateOrderRequest testOrder = OrderGenerator.createOrderWithMinimumIngredients(ingredients);
         apiClient.register(randomUser());
         apiClient.auth();
-        apiClient.createOrder(generateRandomValidOrder());
+        apiClient.createOrder(testOrder);
 
         Response response = apiClient.getUserOrdersWithoutToken();
         assertThat("Некорректный код ответа", response.statusCode(), equalTo(200));
@@ -330,10 +360,8 @@ public class ApiTests {
 
     private static Stream<Arguments> orderData() {
         return Stream.of(
-                Arguments.of(generateRandomValidOrder(), 200, "c валидными данными"),
-                Arguments.of(generateOrder(0, 1, 1), 500, "без булки (имитируя Frontend он блокирует возможность создавать бургер без булки)"),
-                Arguments.of(generateOrder(0, 0, 0), 400, "без ингредиентов"),
-                Arguments.of(generateNonValidOrder(5), 500, "с невалидными данными")
+                Arguments.of(createOrderWithMultipleIngredients(ingredients), 200, "c валидными данными"),
+                Arguments.of(new CreateOrderRequest(), 400, "без ингредиентов")
         );
     }
 

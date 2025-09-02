@@ -13,6 +13,7 @@ public class ApiClient {
     private static final String API_USER = "/api/auth/user";
     private static final String API_ORDERS = "/api/orders";
     private static final String API_GET_INGRIDIENTS = "/api/ingredients";
+    private static final String INGREDIENTS = "/api/ingredients";
     private static final String API_REGISTER = "/api/auth/register";
 
     private String token;
@@ -116,5 +117,12 @@ public class ApiClient {
                 .header("Content-type", "application/json")
                 .get(API_GET_INGRIDIENTS);
         return response;
+    }
+
+    @Step("Получение списка всех ингредиентов")
+    public Response getAllIngredients() {
+        return given()
+                .when()
+                .get(INGREDIENTS);
     }
 }
